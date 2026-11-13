@@ -3,7 +3,7 @@ import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/fi
 import { firebaseConfig } from "./firebase-config.js";
 
 // Volgorde van de thema's op de pagina. Onbekende thema's komen daarna, op alfabet.
-const THEMAS = ["Iconische bouwwerken", "Games & retro", "Superhelden", "Auto's & motoren", "Tovenaarswereld", "Fantasy & film"];
+const THEMAS = ["Icons", "Ideas", "Marvel", "DC", "Technic", "Harry Potter", "Lord of the Rings", "Pokémon", "Super Mario", "Pirates of the Caribbean", "Star Wars", "Stranger Things"];
 const LINK = nr => `https://www.brickwatch.net/nl-NL/set/${encodeURIComponent(nr)}/`;
 
 const fs = getFirestore(initializeApp(firebaseConfig));
