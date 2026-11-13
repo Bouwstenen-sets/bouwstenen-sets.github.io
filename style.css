@@ -67,6 +67,7 @@ a.ph:hover .peek,a.ph:focus-visible .peek{opacity:1}
 .pill.ok{background:var(--ok-bg);color:var(--ok)}
 .pill.last{background:var(--last-bg);color:var(--last)}
 .pill.out{background:var(--out-bg);color:var(--out)}
+.pill.soon{background:var(--brick);color:var(--brick-ink);font-size:.7rem;max-width:calc(100% - 20px)}
 .body{padding:12px 14px 14px;display:grid;grid-template-columns:minmax(0,1fr);gap:3px;align-content:start}
 .name{font-weight:700;font-size:1rem;line-height:1.25;overflow-wrap:anywhere;margin:0}
 .ref{font-family:var(--mono);font-size:.74rem;color:var(--muted);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;overflow-wrap:anywhere}

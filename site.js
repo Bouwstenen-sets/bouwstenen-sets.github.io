@@ -11,21 +11,23 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const eur = n => { n = Number(n) || 0; return "€ " + (n % 1 ? n.toFixed(2).replace(".", ",") : `${n},-`); };
 const slug = t => t.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-const V = { items: [], loaded: false, onlyAvail: false, thema: "", q: "" };
+const V = { items: [], soon: false, loaded: false, onlyAvail: false, thema: "", q: "" };
 
+const rank = i => ({ beschikbaar: 0, binnenkort: 1, uitverkocht: 2 }[i.status] ?? 1);
 const themaOrder = t => { const i = THEMAS.indexOf(t); return i < 0 ? 99 : i; };
 const themas = () => [...new Set(V.items.map(i => i.thema || "Overig"))]
   .sort((a,b) => themaOrder(a) - themaOrder(b) || a.localeCompare(b, "nl"));
 
 function card(i){
-  const out = i.status === "uitverkocht";
+  const out = !V.soon && i.status === "uitverkocht";
+  const pill = (V.soon || i.status === "binnenkort") ? `<span class="pill soon">Binnenkort beschikbaar</span>` : `<span class="pill ${out?"out":"ok"}">${out?"Uitverkocht":"Beschikbaar"}</span>`;
   const ph = i.foto
     ? `<img src="${esc(i.foto)}" alt="${esc(i.naam)}" loading="lazy" decoding="async">`
     : `<span class="empty-ph"><span class="studs"><i></i><i></i><i></i><i></i></span>Foto volgt</span>`;
   const href = i.nummer ? LINK(i.nummer) : null;
   const wrapPh = href
-    ? `<a class="ph" href="${href}" target="_blank" rel="noopener" aria-label="${esc(i.naam)} bekijken op Brickwatch">${ph}<span class="pill ${out?"out":"ok"}">${out?"Uitverkocht":"Beschikbaar"}</span><span class="peek">Bekijk origineel ↗</span></a>`
-    : `<div class="ph">${ph}<span class="pill ${out?"out":"ok"}">${out?"Uitverkocht":"Beschikbaar"}</span></div>`;
+    ? `<a class="ph" href="${href}" target="_blank" rel="noopener" aria-label="${esc(i.naam)} bekijken op Brickwatch">${ph}${pill}<span class="peek">Bekijk origineel ↗</span></a>`
+    : `<div class="ph">${ph}${pill}</div>`;
   return `<article class="card ${out?"out":""}">
     ${wrapPh}
     <div class="body">
@@ -50,18 +52,21 @@ function render(){
   $("chips").innerHTML = [`<button data-t="" aria-pressed="${!V.thema}">Alle thema's</button>`]
     .concat(ts.map(t => `<button data-t="${esc(t)}" aria-pressed="${V.thema===t}">${esc(t)}</button>`)).join("");
 
-  const avail = V.items.filter(i => i.status !== "uitverkocht").length;
-  $("count").textContent = avail === 1 ? "1 set beschikbaar" : `${avail} sets beschikbaar`;
+  const avail = V.items.filter(i => i.status === "beschikbaar").length;
+  const soon = V.items.filter(i => i.status === "binnenkort").length;
+  $("count").textContent = V.soon ? `${V.items.length} sets · binnenkort beschikbaar`
+    : [avail === 1 ? "1 set beschikbaar" : `${avail} sets beschikbaar`, soon ? `${soon} binnenkort` : ""].filter(Boolean).join(" · ");
+  $("availWrap").hidden = V.soon;
 
   const q = V.q.trim().toLowerCase();
-  const match = i => (!V.onlyAvail || i.status !== "uitverkocht")
+  const match = i => (V.soon || !V.onlyAvail || i.status === "beschikbaar")
     && (!V.thema || (i.thema || "Overig") === V.thema)
     && (!q || i.naam.toLowerCase().includes(q) || String(i.nummer).includes(q));
   if (!V.items.length){ main.innerHTML = `<div class="msg">Er staan op dit moment geen sets online. Kijk later nog eens.</div>`; return; }
 
   const html = ts.map(t => {
     const list = V.items.filter(i => (i.thema || "Overig") === t && match(i))
-      .sort((a,b) => ((a.status==="uitverkocht") - (b.status==="uitverkocht")) || a.naam.localeCompare(b.naam, "nl"));
+      .sort((a,b) => (V.soon ? 0 : rank(a) - rank(b)) || a.naam.localeCompare(b.naam, "nl"));
     if (!list.length) return "";
     return `<section class="theme" id="${slug(t)}"><h2>${esc(t)} <span class="n">${list.length}</span></h2><div class="grid">${list.map(card).join("")}</div></section>`;
   }).join("");
@@ -76,7 +81,9 @@ render();
 const slow = setTimeout(() => { if (!V.loaded) $("count").textContent = "Het laden duurt langer dan normaal…"; }, 8000);
 onSnapshot(collection(fs, "shop"), snap => {
   clearTimeout(slow);
-  V.items = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(i => i.naam);
+  const site = snap.docs.find(d => d.id === "_site");
+  V.soon = !!(site && site.data().binnenkort);
+  V.items = snap.docs.filter(d => d.id !== "_site").map(d => ({ id: d.id, ...d.data() })).filter(i => i.naam);
   V.loaded = true;
   render();
 }, () => {
